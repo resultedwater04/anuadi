@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="/favicon.svg">
+  <title>ANUADI</title>
+  <style>
+    :root {
+      --primary-color: #3e4042; /* Blue accent */
+      --secondary-color: #6c757d; /* Gray for neutrals */
+      --background-color: linear-gradient(to bottom, #f9e7e7, #ccd8e2); /* Subtle blue gradient */
+      --text-color: #333;
+      --border-color: #dee2e6;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    body { 
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
+      padding: 24px; 
+      max-width: 1200px; 
+      margin: auto; 
+      background: var(--background-color); 
+      color: var(--text-color);
+      line-height: 1.5;
+    }
+    header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 24px; 
+      flex-wrap: wrap; 
+      gap: 16px;
+    }
+    h2 { 
+      margin: 0; 
+      font-size: 1.8em; 
+      font-weight: 600;
+    }
+    select, button { 
+      padding: 10px 16px; 
+      font-size: 14px; 
+      border-radius: 6px; 
+      border: 1px solid var(--border-color); 
+      background: white; 
+      cursor: pointer; 
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    button:hover { 
+      background: #e9ecef; 
+      box-shadow: var(--shadow);
+    }
+    button:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed;
+    }
+    #slideshowWrap { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 70vh; 
+      border: 1px solid var(--border-color); 
+      border-radius: 12px; 
+      overflow: hidden; 
+      background: #ffffff; 
+      position: relative; 
+      box-shadow: var(--shadow); 
+    }
+    #slideshow { 
+      max-width: 100%; 
+      max-height: 100%; 
+      object-fit: contain; 
+      display: block;
+      border-radius: 12px;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .controls { 
+      display: flex; 
+      gap: 12px; 
+      align-items: center;
+    }
+    .small { 
+      font-size: 13px; 
+      color: var(--secondary-color); 
+      margin-left: 8px; 
+    }
+    footer { 
+      margin-top: 24px; 
+      font-size: 13px; 
+      color: var(--secondary-color); 
+      text-align: center;
+    }
+    #debug { 
+      margin-top: 16px; 
+      white-space: pre-wrap; 
+      font-family: monospace; 
+      background: #f1f1f1; 
+      padding: 12px; 
+      border-radius: 8px; 
+      max-height: 250px; 
+      overflow: auto; 
+      display: none; /* Hidden by default for cleaner look */
+    }
+    #navButtons { 
+      position: absolute; 
+      bottom: 20px; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      display: flex; 
+      gap: 16px;
+    }
+    #navButtons button { 
+      background: rgba(255,255,255,0.8); 
+      border: none; 
+      cursor: pointer; 
+      padding: 10px 20px; 
+      border-radius: 6px; 
+      font-size: 16px; 
+      transition: background 0.2s;
+    }
+    #navButtons button:hover { 
+      background: rgba(255,255,255,1);
+    }
+    #imageInfo { 
+      position: absolute; 
+      top: 15px; 
+      left: 15px; 
+      background: rgba(0,0,0,0.6); 
+      color: white; 
+      padding: 8px 12px; 
+      border-radius: 6px; 
+      font-size: 13px;
+    }
+    #fullscreenBtn { 
+      margin-left: 12px;
+    }
+    #randomCheckbox { 
+      margin-left: 12px; 
+      display: flex; 
+      align-items: center;
+    }
+    #settingsMenu { 
+      position: relative; 
+      display: inline-block;
+    }
+    #settingsBtn { 
+      cursor: pointer;
+    }
+    #settingsDropdown { 
+      display: none; 
+      position: absolute; 
+      background: white; 
+      border: 1px solid var(--border-color); 
+      padding: 12px; 
+      z-index: 1; 
+      border-radius: 8px; 
+      box-shadow: var(--shadow);
+    }
+    #settingsDropdown label {
+      display: block;
+      margin-bottom: 8px;
+      padding: 4px 8px;
+    }
+    #settingsDropdown label:last-child {
+      margin-bottom: 0;
+    }
+    #settingsMenu:hover #settingsDropdown { 
+      display: block;
+    }
+    .fade-out { opacity: 0.8; } /* Subtle opacity change */
+    .fade-in { opacity: 1; }
+    /* Media queries for responsiveness */
+    @media (max-width: 768px) {
+      header { flex-direction: column; justify-content: center; }
+      .controls { flex-wrap: wrap; justify-content: center; }
+      #slideshowWrap { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Anu + Adi mwah</h2>
+
+    <div class="controls">
+      <label for="folderSelect">Folder:</label>
+      <select id="folderSelect"><option value="__ALL__">All Images</option></select>
+      <button id="refreshBtn">Refresh</button>
+      <button id="startBtn">Start</button>
+      <button id="stopBtn" disabled>Stop</button>
+      <label class="small">Interval:</label>
+      <select id="intervalSelect" title="Slide interval">
+        <option value="1000">1s</option>
+        <option value="2000" selected>2s</option>
+        <option value="3000">3s</option>
+        <option value="4000">4s</option>
+      </select>
+      <label id="randomCheckbox"><input type="checkbox" id="randomToggle"> Random order</label>
+      <button id="fullscreenBtn">Fullscreen</button>
+      <div id="settingsMenu">
+        <button id="settingsBtn">Settings ⚙️</button>
+        <div id="settingsDropdown">
+          <label><input type="checkbox" id="showInfoToggle" checked> Show image info</label>
+          <label><input type="checkbox" id="fadeToggle" checked> Fade transitions</label>
+          <label><input type="checkbox" id="preloadToggle" checked> Preload images</label>
+          <label><input type="checkbox" id="debugToggle"> Show debug log</label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="slideshowWrap">
+      <img id="slideshow" alt="slideshow image" src="https://lh3.googleusercontent.com/drive-storage/AJQWtBP-GhlXQqGNRvOqail_r8q39UCQDRZsAqv3mx76y7lDjk61k4yV7MSA7OoQum5Nb-AbjGcJ5fBQIWf5fajDdhn2vRHu5Dr8hUIp9Q=s2200" />
+      <div id="navButtons" style="display: none;">
+        <button id="prevBtn">◀ Prev</button>
+        <button id="nextBtn">Next ▶</button>
+      </div>
+      <div id="imageInfo"></div>
+    </div>
+    <div id="status" class="small" style="margin-top:12px; text-align: center;"></div>
+    <div id="debug"></div>
+  </main>
+
+  <footer>
+    LMAO no way this worked
+  </footer>
+
+<script>
+/* ========== CONFIG ========== */
+const API_KEY = 'AIzaSyAWHQutpafITBTejgv7--SuPrpw-utisZo'; // Load from environment variable, e.g., process.env.API_KEY
+const ROOT_FOLDER_ID = '1eo1LCf75xJETpGkZhLrgq7FTeWxXe9u-'; // Load from environment variable, e.g., process.env.ROOT_FOLDER_ID
+
+/* ========== STATE ========== */
+let folders = []; // subfolders
+let imagesByFolder = new Map(); // folderId -> images array
+let imagesInRoot = [];
+let aggregatedImages = [];
+let currentImages = []; // Current list of images for slideshow (shuffled or not)
+let currentIndex = 0;
+let intervalHandle = null;
+let isFullscreen = false;
+let showInfo = true;
+let useFade = true;
+let preloadImages = true;
+let showDebug = false;
+
+/* ========== UI ========== */
+const folderSelect = document.getElementById('folderSelect');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const slideshowImg = document.getElementById('slideshow');
+const status = document.getElementById('status');
+const intervalSelect = document.getElementById('intervalSelect');
+const debugEl = document.getElementById('debug');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const navButtons = document.getElementById('navButtons');
+const imageInfo = document.getElementById('imageInfo');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const randomToggle = document.getElementById('randomToggle');
+const showInfoToggle = document.getElementById('showInfoToggle');
+const fadeToggle = document.getElementById('fadeToggle');
+const preloadToggle = document.getElementById('preloadToggle');
+const debugToggle = document.getElementById('debugToggle');
+const slideshowWrap = document.getElementById('slideshowWrap');
+
+function dbg(...args){ 
+  if (!showDebug) return;
+  console.debug(...args); 
+  debugEl.textContent += args.map(a=> typeof a==='object' ? JSON.stringify(a,null,2) : String(a)).join(' ') + '\n\n'; 
+  if(debugEl.textContent.length>8000) debugEl.textContent = debugEl.textContent.slice(-8000); 
+}
+function setStatus(text){ status.textContent = text; dbg('[STATUS]', text); }
+
+/* Acceptable image filename extensions */
+const IMAGE_EXTS = ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff','.jfif','.heic'];
+
+/* Build Drive files.list URL. Note: no mimeType filter; we will filter by extension client-side */
+function driveListUrl(q,pageToken){
+  const params = new URLSearchParams({
+    key: API_KEY,
+    q: q,
+    fields: 'nextPageToken, files(id, name, mimeType, thumbnailLink, webViewLink, webContentLink)',
+    pageSize: '1000',
+    includeItemsFromAllDrives: 'true',
+    supportsAllDrives: 'true'
+  });
+  if (pageToken) params.set('pageToken', pageToken);
+  return `https://www.googleapis.com/drive/v3/files?${params.toString()}`;
+}
+
+/* fetch helper */
+async function fetchJson(url){
+  dbg('FETCH', url);
+  const r = await fetch(url);
+  const txt = await r.text();
+  let json;
+  try { json = JSON.parse(txt); } catch(e) { json = {raw: txt}; }
+  if (!r.ok) {
+    dbg('Drive API error', r.status, json);
+    throw new Error('Drive API error: ' + r.status + ' — ' + (json.error?.message || JSON.stringify(json)));
+  }
+  dbg('API result', json);
+  return json;
+}
+
+/* Load immediate subfolders */
+async function loadFolders(){
+  setStatus('Loading subfolders...');
+  const q = `'${ROOT_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+  let all = [], pageToken = null;
+  try {
+    do {
+      const data = await fetchJson(driveListUrl(q,pageToken));
+      if (data.files) all = all.concat(data.files);
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+  } catch(err){
+    dbg('loadFolders error', err.message || err);
+    setStatus('Error loading folders — see debug below or console.');
+    return;
+  }
+  folders = all.map(f => ({id: f.id, name: f.name}));
+  // populate select: All, Root, then subfolders
+  folderSelect.innerHTML = '';
+  folderSelect.appendChild(Object.assign(document.createElement('option'), {value:'__ALL__', textContent: 'All Images'}));
+  folderSelect.appendChild(Object.assign(document.createElement('option'), {value: ROOT_FOLDER_ID, textContent: 'Root (no folder)'}));
+  for (const f of folders) {
+    folderSelect.appendChild(Object.assign(document.createElement('option'), {value:f.id, textContent: f.name}));
+  }
+  setStatus(`Loaded ${folders.length} subfolders.`);
+}
+
+/* List ALL files in a folder (no mime filter) then client-side filter by file extension */
+async function listFilesInFolder(folderId){
+  setStatus(`Loading files in folder ${folderId} ...`);
+  let all = [], pageToken = null;
+  const q = `'${folderId}' in parents and trashed = false`;
+  try {
+    do {
+      const data = await fetchJson(driveListUrl(q,pageToken));
+      if (data.files) all = all.concat(data.files);
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+  } catch(err){
+    dbg('listFilesInFolder error', err.message || err);
+    setStatus('Error listing files — see debug/console.');
+    return [];
+  }
+  // filter by extension
+  const images = all.filter(f => {
+    const name = (f.name || '').toLowerCase();
+    return IMAGE_EXTS.some(ext => name.endsWith(ext));
+  });
+  dbg('files found in folder', {total:all.length, images: images.length});
+  return images;
+}
+
+/* Gather all images across root & subfolders (aggregatedImages) */
+async function gatherAllImages(){
+  setStatus('Gathering images from root + subfolders...');
+  aggregatedImages = [];
+  // root images
+  const rootFiles = await listFilesInFolder(ROOT_FOLDER_ID);
+  imagesInRoot = rootFiles;
+  if (rootFiles.length) aggregatedImages.push(...rootFiles.map(i=>({...i, folderName: '(root)'})));
+  // images in each subfolder
+  for (const f of folders){
+    const imgs = await listFilesInFolder(f.id);
+    imagesByFolder.set(f.id, imgs);
+    if (imgs.length) aggregatedImages.push(...imgs.map(i=>({...i, folderName: f.name})));
+  }
+  setStatus(`Total images found: ${aggregatedImages.length}`);
+  dbg('AGGREGATED', aggregatedImages.map(i=> ({id:i.id,name:i.name,folder:i.folderName, thumbnailLink: i.thumbnailLink})).slice(0,200)); // Added thumbnailLink to debug for verification
+  return aggregatedImages;
+}
+
+/* Helper to detect HEIC */
+function isHEIC(filename) {
+  if (!filename) return false;
+  return filename.toLowerCase().endsWith('.heic') || filename.toLowerCase().endsWith('.heif');
+}
+
+/* Get a public-serving image URL for a Drive file id */
+function imageUrlFromFile(file){
+  // Prefer thumbnailLink for compatibility (always JPG/PNG, works for HEIC)
+  if (file.thumbnailLink) {
+    // Make thumbnail larger for better slideshow quality (Google allows up to ~s2200)
+    return file.thumbnailLink.replace(/=s\d+$/, '=s2200'); // Increased size for better quality
+  }
+  // Fallback for non-HEIC: try full resolution if public
+  if (!isHEIC(file.name) && file.webContentLink) {
+    return file.webContentLink.replace(/=download$/, '=view'); // Change to view mode if possible
+  }
+  // Final fallback
+  return `https://drive.google.com/uc?export=view&id=${file.id}`;
+}
+
+/* Shuffle array (Fisher-Yates) */
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+/* Preload next image */
+function preloadNextImage(images, index) {
+  if (!preloadImages) return;
+  const nextFile = images[(index + 1) % images.length];
+  if (nextFile) {
+    const img = new Image();
+    img.src = imageUrlFromFile(nextFile);
+  }
+}
+
+/* Show next image with optional fade */
+function showNext(images, direction = 1) {
+  if (!images || images.length === 0) return;
+  currentIndex = (currentIndex + direction + images.length) % images.length;
+  const file = images[currentIndex];
+  const url = imageUrlFromFile(file);
+  dbg('Loading image:', file.name, 'URL:', url);
+
+  slideshowImg.onerror = function() {
+    dbg('Image load failed:', file.name, '- skipping');
+    showNext(images, direction);
+  };
+
+  slideshowImg.onload = function() {
+    slideshowImg.onerror = null;
+    setStatus(`Showing: ${file.name} (${currentIndex + 1}/${images.length})`);
+    if (showInfo) {
+      imageInfo.textContent = `${file.name} - ${file.folderName || '(root)'}`;
+      imageInfo.style.display = 'block';
+    } else {
+      imageInfo.style.display = 'none';
+    }
+    preloadNextImage(images, currentIndex);
+  };
+
+  if (useFade) {
+    slideshowImg.classList.remove('fade-in');
+    slideshowImg.classList.add('fade-out');
+    setTimeout(() => {
+      slideshowImg.src = url;
+      slideshowImg.alt = file.name || 'image';
+      slideshowImg.classList.remove('fade-out');
+      slideshowImg.classList.add('fade-in');
+    }, 200); // Shorter duration for subtlety
+  } else {
+    slideshowImg.classList.remove('fade-out', 'fade-in');
+    slideshowImg.src = url;
+    slideshowImg.alt = file.name || 'image';
+  }
+}
+
+/* Reset interval timer */
+function resetInterval() {
+  if (intervalHandle) {
+    clearInterval(intervalHandle);
+    const intervalMs = Number(intervalSelect.value) || 3000;
+    intervalHandle = setInterval(() => showNext(currentImages), intervalMs);
+  }
+}
+
+/* Start/stop logic */
+function startSlideshow(){
+  if (intervalHandle) return;
+  const sel = folderSelect.value;
+  let images = [];
+  if (sel === '__ALL__') images = aggregatedImages.slice(); // Copy to shuffle
+  else if (sel === ROOT_FOLDER_ID) images = imagesInRoot.slice();
+  else images = (imagesByFolder.get(sel) || []).slice();
+  if (!images || images.length === 0) {
+    setStatus('No images to show. Click Refresh or pick a folder with images.');
+    return;
+  }
+  const isRandom = randomToggle.checked;
+  if (isRandom) {
+    shuffleArray(images);
+  }
+  const selectedText = folderSelect.options[folderSelect.selectedIndex].textContent;
+  currentImages = images;
+  currentIndex = 0;
+  showNext(currentImages);
+  const intervalMs = Number(intervalSelect.value) || 3000;
+  intervalHandle = setInterval(() => showNext(currentImages), intervalMs);
+  startBtn.disabled = true; stopBtn.disabled = false;
+  navButtons.style.display = 'flex'; // Show nav buttons
+  setStatus(`Slideshow running for ${selectedText}${isRandom ? ' (random order)' : ''}`);
+}
+function stopSlideshow(){
+  if (intervalHandle){
+    clearInterval(intervalHandle);
+    intervalHandle = null;
+    startBtn.disabled = false; stopBtn.disabled = true;
+    setStatus('Slideshow stopped.');
+  }
+}
+
+/* Manual navigation */
+prevBtn.addEventListener('click', () => {
+  if (currentImages.length > 0) {
+    showNext(currentImages, -1);
+    resetInterval(); // Reset timer to keep slideshowing
+  }
+});
+nextBtn.addEventListener('click', () => {
+  if (currentImages.length > 0) {
+    showNext(currentImages, 1);
+    resetInterval(); // Reset timer to keep slideshowing
+  }
+});
+
+/* Keyboard navigation */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') prevBtn.click();
+  if (e.key === 'ArrowRight') nextBtn.click();
+});
+
+/* Fullscreen toggle */
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    slideshowWrap.requestFullscreen().then(() => {
+      fullscreenBtn.textContent = 'Exit Fullscreen';
+      isFullscreen = true;
+    }).catch(err => {
+      console.error('Fullscreen request failed:', err);
+    });
+  } else {
+    document.exitFullscreen().then(() => {
+      fullscreenBtn.textContent = 'Fullscreen';
+      isFullscreen = false;
+    }).catch(err => {
+      console.error('Exit fullscreen failed:', err);
+    });
+  }
+});
+
+/* Listen for fullscreen changes (e.g., via Escape key) */
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    fullscreenBtn.textContent = 'Fullscreen';
+    isFullscreen = false;
+  } else {
+    fullscreenBtn.textContent = 'Exit Fullscreen';
+    isFullscreen = true;
+  }
+});
+
+/* Settings toggles */
+showInfoToggle.addEventListener('change', (e) => { showInfo = e.target.checked; });
+fadeToggle.addEventListener('change', (e) => { useFade = e.target.checked; });
+preloadToggle.addEventListener('change', (e) => { preloadImages = e.target.checked; });
+debugToggle.addEventListener('change', (e) => { 
+  showDebug = e.target.checked; 
+  debugEl.style.display = showDebug ? 'block' : 'none'; 
+});
+
+/* Full refresh */
+async function doRefresh(){
+  imagesByFolder.clear(); imagesInRoot = []; aggregatedImages = []; debugEl.textContent='';
+  await loadFolders();
+  await gatherAllImages();
+  setStatus('Refresh complete. Select folder and click Start.');
+}
+
+/* Initialize */
+(async function init(){
+  setStatus('Initializing slideshow...');
+  try {
+    await loadFolders();
+    await gatherAllImages();
+    setStatus('Ready — select folder and click Start. If images fail to load, ensure they are shared publicly.');
+    navButtons.style.display = 'none'; // Hide nav initially
+    debugEl.style.display = 'none'; // Hide debug initially
+  } catch(err){
+    dbg('INIT error', err);
+    setStatus('Initialization error — check console/debug output.');
+  }
+})();
+
+/* Events */
+startBtn.addEventListener('click', startSlideshow);
+stopBtn.addEventListener('click', stopSlideshow);
+refreshBtn.addEventListener('click', async ()=>{
+  refreshBtn.disabled = true;
+  await doRefresh();
+  refreshBtn.disabled = false;
+});
+folderSelect.addEventListener('change', async ()=>{
+  const sel = folderSelect.value;
+  if (sel === '__ALL__') setStatus(`All selected — ${aggregatedImages.length} images.`);
+  else if (sel === ROOT_FOLDER_ID) setStatus(`${imagesInRoot.length} images in root.`);
+  else {
+    if (!imagesByFolder.has(sel)) {
+      const imgs = await listFilesInFolder(sel);
+      imagesByFolder.set(sel, imgs);
+    }
+    setStatus(`${(imagesByFolder.get(sel) || []).length} images in selected folder.`);
+  }
+});
+</script>
+</body>
+</html>
