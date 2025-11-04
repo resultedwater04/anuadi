@@ -13,6 +13,21 @@
       --text-color: #333;
       --border-color: #dee2e6;
       --shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --element-bg: white;
+      --element-hover-bg: #e9ecef;
+      --slideshow-bg: #ffffff;
+      --footer-color: var(--secondary-color);
+    }
+    body.dark-mode {
+      --background-color: linear-gradient(to bottom, #2c3e50, #1a252f); /* Dark gradient */
+      --text-color: #f0f0f0;
+      --border-color: #555;
+      --secondary-color: #bbb;
+      --element-bg: #333;
+      --element-hover-bg: #555;
+      --slideshow-bg: #222;
+      --footer-color: #999;
+      --shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     body { 
       font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
@@ -41,12 +56,13 @@
       font-size: 14px; 
       border-radius: 6px; 
       border: 1px solid var(--border-color); 
-      background: white; 
+      background: var(--element-bg); 
+      color: var(--text-color);
       cursor: pointer; 
       transition: background 0.2s, box-shadow 0.2s;
     }
     button:hover { 
-      background: #e9ecef; 
+      background: var(--element-hover-bg); 
       box-shadow: var(--shadow);
     }
     button:disabled { 
@@ -61,7 +77,7 @@
       border: 1px solid var(--border-color); 
       border-radius: 12px; 
       overflow: hidden; 
-      background: #ffffff; 
+      background: var(--slideshow-bg); 
       position: relative; 
       box-shadow: var(--shadow); 
     }
@@ -86,7 +102,7 @@
     footer { 
       margin-top: 24px; 
       font-size: 13px; 
-      color: var(--secondary-color); 
+      color: var(--footer-color); 
       text-align: center;
     }
     #debug { 
@@ -99,6 +115,9 @@
       max-height: 250px; 
       overflow: auto; 
       display: none; /* Hidden by default for cleaner look */
+    }
+    body.dark-mode #debug {
+      background: #444;
     }
     #navButtons { 
       position: absolute; 
@@ -117,8 +136,15 @@
       font-size: 16px; 
       transition: background 0.2s;
     }
+    body.dark-mode #navButtons button {
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+    }
     #navButtons button:hover { 
       background: rgba(255,255,255,1);
+    }
+    body.dark-mode #navButtons button:hover {
+      background: rgba(0,0,0,1);
     }
     #imageInfo { 
       position: absolute; 
@@ -129,6 +155,10 @@
       padding: 8px 12px; 
       border-radius: 6px; 
       font-size: 13px;
+    }
+    body.dark-mode #imageInfo {
+      background: rgba(255,255,255,0.6);
+      color: #000;
     }
     #fullscreenBtn { 
       margin-left: 12px;
@@ -148,7 +178,7 @@
     #settingsDropdown { 
       display: none; 
       position: absolute; 
-      background: white; 
+      background: var(--element-bg); 
       border: 1px solid var(--border-color); 
       padding: 12px; 
       z-index: 1; 
@@ -159,6 +189,7 @@
       display: block;
       margin-bottom: 8px;
       padding: 4px 8px;
+      color: var(--text-color);
     }
     #settingsDropdown label:last-child {
       margin-bottom: 0;
@@ -202,6 +233,7 @@
           <label><input type="checkbox" id="fadeToggle" checked> Fade transitions</label>
           <label><input type="checkbox" id="preloadToggle" checked> Preload images</label>
           <label><input type="checkbox" id="debugToggle"> Show debug log</label>
+          <label><input type="checkbox" id="darkModeToggle"> Dark mode</label>
         </div>
       </div>
     </div>
@@ -262,6 +294,7 @@ const showInfoToggle = document.getElementById('showInfoToggle');
 const fadeToggle = document.getElementById('fadeToggle');
 const preloadToggle = document.getElementById('preloadToggle');
 const debugToggle = document.getElementById('debugToggle');
+const darkModeToggle = document.getElementById('darkModeToggle');
 const slideshowWrap = document.getElementById('slideshowWrap');
 
 function dbg(...args){ 
@@ -557,6 +590,9 @@ preloadToggle.addEventListener('change', (e) => { preloadImages = e.target.check
 debugToggle.addEventListener('change', (e) => { 
   showDebug = e.target.checked; 
   debugEl.style.display = showDebug ? 'block' : 'none'; 
+});
+darkModeToggle.addEventListener('change', (e) => { 
+  document.body.classList.toggle('dark-mode', e.target.checked); 
 });
 
 /* Full refresh */
