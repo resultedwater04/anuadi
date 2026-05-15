@@ -202,8 +202,29 @@
     /* Media queries for responsiveness */
     @media (max-width: 768px) {
       header { flex-direction: column; justify-content: center; }
-      .controls { flex-wrap: wrap; justify-content: center; }
+      .controls { flex-wrap: wrap; justify-content: center; gap: 8px; }
       #slideshowWrap { height: 50vh; }
+      #navButtons button {
+        padding: 12px 24px;
+        font-size: 18px;
+      }
+      select, button {
+        font-size: 16px;
+        padding: 12px 16px;
+      }
+      #settingsDropdown {
+        right: 0;
+        width: 220px;
+      }
+      #settingsDropdown label {
+        padding: 8px 12px;
+      }
+    }
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      h2 { font-size: 1.4em; }
+      #slideshowWrap { height: 40vh; }
+      #navButtons button { padding: 10px 16px; font-size: 16px; }
     }
   </style>
 </head>
@@ -237,6 +258,7 @@
           <label><input type="checkbox" id="preloadToggle" checked> Preload images</label>
           <label><input type="checkbox" id="debugToggle"> Show debug log</label>
           <label><input type="checkbox" id="darkModeToggle"> Dark mode</label>
+          <label><input type="checkbox" id="autoStartToggle"> Auto-start on load</label>
         </div>
       </div>
     </div>
@@ -244,7 +266,7 @@
 
   <main>
     <div id="slideshowWrap">
-      <img id="slideshow" alt="slideshow image" src="https://lh3.googleusercontent.com/drive-storage/AJQWtBP-GhlXQqGNRvOqail_r8q39UCQDRZsAqv3mx76y7lDjk61k4yV7MSA7OoQum5Nb-AbjGcJ5fBQIWf5fajDdhn2vRHu5Dr8hUIp9Q=s2200" />
+      <img id="slideshow" alt="slideshow image" src="IMG_6240.GIF" />
       <div id="navButtons" style="display: none;">
         <button id="prevBtn">◀ Prev</button>
         <button id="nextBtn">Next ▶</button>
@@ -277,6 +299,8 @@ let showInfo = true;
 let useFade = true;
 let preloadImages = true;
 let showDebug = false;
+let autoStart = false;
+let retryAttempts = new Map(); // Track retry attempts per image ID
 
 /* ========== UI ========== */
 const folderSelect = document.getElementById('folderSelect');
@@ -298,6 +322,7 @@ const fadeToggle = document.getElementById('fadeToggle');
 const preloadToggle = document.getElementById('preloadToggle');
 const debugToggle = document.getElementById('debugToggle');
 const darkModeToggle = document.getElementById('darkModeToggle');
+const autoStartToggle = document.getElementById('autoStartToggle');
 const slideshowWrap = document.getElementById('slideshowWrap');
 
 function dbg(...args){ 
@@ -325,7 +350,7 @@ function driveListUrl(q,pageToken){
   return `https://www.googleapis.com/drive/v3/files?${params.toString()}`;
 }
 
-/* fetch helper */
+/* fetch helper with better error messages */
 async function fetchJson(url){
   dbg('FETCH', url);
   const r = await fetch(url);
@@ -334,7 +359,9 @@ async function fetchJson(url){
   try { json = JSON.parse(txt); } catch(e) { json = {raw: txt}; }
   if (!r.ok) {
     dbg('Drive API error', r.status, json);
-    throw new Error('Drive API error: ' + r.status + ' — ' + (json.error?.message || JSON.stringify(json)));
+    const errorMsg = json.error?.message || 'Unknown error';
+    const userMsg = r.status === 403 ? 'Access denied. Ensure images are shared publicly.' : `Drive API error (${r.status}): ${errorMsg}`;
+    throw new Error(userMsg);
   }
   dbg('API result', json);
   return json;
@@ -441,31 +468,52 @@ function shuffleArray(array) {
   return array;
 }
 
-/* Preload next image */
+/* Preload next 2-3 images for smoother transitions */
 function preloadNextImage(images, index) {
-  if (!preloadImages) return;
-  const nextFile = images[(index + 1) % images.length];
-  if (nextFile) {
-    const img = new Image();
-    img.src = imageUrlFromFile(nextFile);
+  if (!preloadImages || !images || images.length === 0) return;
+  // Preload next 2-3 images
+  for (let i = 1; i <= Math.min(3, images.length - 1); i++) {
+    const nextFile = images[(index + i) % images.length];
+    if (nextFile) {
+      const img = new Image();
+      img.src = imageUrlFromFile(nextFile);
+      img.onerror = () => dbg(`Preload failed for ${nextFile.name}`);
+    }
   }
 }
 
-/* Show next image with optional fade */
+/* Show next image with optional fade and retry logic */
 function showNext(images, direction = 1) {
   if (!images || images.length === 0) return;
   currentIndex = (currentIndex + direction + images.length) % images.length;
   const file = images[currentIndex];
   const url = imageUrlFromFile(file);
-  dbg('Loading image:', file.name, 'URL:', url);
+  const maxRetries = 2;
+  const attemptKey = file.id || file.name;
+  const attempts = (retryAttempts.get(attemptKey) || 0);
+  
+  dbg('Loading image:', file.name, 'URL:', url, `(attempt ${attempts + 1}/${maxRetries + 1})`);
 
   slideshowImg.onerror = function() {
-    dbg('Image load failed:', file.name, '- skipping');
-    showNext(images, direction);
+    dbg('Image load failed:', file.name);
+    
+    if (attempts < maxRetries) {
+      // Retry with exponential backoff
+      const delay = 300 * (attempts + 1);
+      retryAttempts.set(attemptKey, attempts + 1);
+      dbg(`Retrying ${file.name} in ${delay}ms...`);
+      setTimeout(() => showNext(images, 0), delay);
+    } else {
+      // Max retries reached, skip to next image
+      retryAttempts.delete(attemptKey);
+      dbg(`Max retries reached for ${file.name}, skipping to next...`);
+      showNext(images, direction);
+    }
   };
 
   slideshowImg.onload = function() {
     slideshowImg.onerror = null;
+    retryAttempts.delete(attemptKey); // Clear retry count on success
     setStatus(`Showing: ${file.name} (${currentIndex + 1}/${images.length})`);
     if (showInfo) {
       imageInfo.textContent = `${file.name} - ${file.folderName || '(root)'}`;
@@ -484,7 +532,7 @@ function showNext(images, direction = 1) {
       slideshowImg.alt = file.name || 'image';
       slideshowImg.classList.remove('fade-out');
       slideshowImg.classList.add('fade-in');
-    }, 200); // Shorter duration for subtlety
+    }, 200);
   } else {
     slideshowImg.classList.remove('fade-out', 'fade-in');
     slideshowImg.src = url;
@@ -506,7 +554,7 @@ function startSlideshow(){
   if (intervalHandle) return;
   const sel = folderSelect.value;
   let images = [];
-  if (sel === '__ALL__') images = aggregatedImages.slice(); // Copy to shuffle
+  if (sel === '__ALL__') images = aggregatedImages.slice();
   else if (sel === ROOT_FOLDER_ID) images = imagesInRoot.slice();
   else images = (imagesByFolder.get(sel) || []).slice();
   if (!images || images.length === 0) {
@@ -520,11 +568,12 @@ function startSlideshow(){
   const selectedText = folderSelect.options[folderSelect.selectedIndex].textContent;
   currentImages = images;
   currentIndex = 0;
+  retryAttempts.clear(); // Reset retry counts on new slideshow
   showNext(currentImages);
   const intervalMs = Number(intervalSelect.value) || 3000;
   intervalHandle = setInterval(() => showNext(currentImages), intervalMs);
   startBtn.disabled = true; stopBtn.disabled = false;
-  navButtons.style.display = 'flex'; // Show nav buttons
+  navButtons.style.display = 'flex';
   setStatus(`Slideshow running for ${selectedText}${isRandom ? ' (random order)' : ''}`);
 }
 function stopSlideshow(){
@@ -596,6 +645,9 @@ debugToggle.addEventListener('change', (e) => {
 });
 darkModeToggle.addEventListener('change', (e) => { 
   document.body.classList.toggle('dark-mode', e.target.checked); 
+});
+autoStartToggle.addEventListener('change', (e) => { 
+  autoStart = e.target.checked; 
 });
 
 /* Full refresh */
