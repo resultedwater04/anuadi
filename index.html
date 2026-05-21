@@ -659,7 +659,9 @@ async function doRefresh(){
 }
 
 /* Initialize */
+
 (async function init(){
+  randomToggle.checked = true;
   setStatus('Initializing slideshow...');
   try {
     await loadFolders();
